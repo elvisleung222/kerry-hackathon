@@ -118,7 +118,7 @@ namespace Controller
             const double ki = 0.00;
             const double kd = 0.00;
 
-            var output = kP * (target - actual);
+            var output = (kP * (target - actual) + 360) % 360 - 180;
 
             return output;
         }
@@ -138,15 +138,33 @@ namespace Controller
             };
         }
 
-        public void StartPath(Point3D direction, double time)
+        public Task StartPath(Point3D direction, double time)
         {
             var mag = Math.Pow(direction.X, 2) + Math.Pow(direction.Y, 2) + Math.Pow(direction.Z, 2);
 
-            direction.X /= mag;
-            direction.Y /= mag;
-            direction.Z /= mag;
+            if (Math.Abs(mag) > 0.00001)
+            {
+                direction.X /= mag;
+                direction.Y /= mag;
+                direction.Z /= mag;
+            }
+            else
+            {
+                direction.X = 0;
+                direction.Y = 0;
+                direction.Z = 0;
+            }
+
             this._vector = direction;
             this._path = new Path(time);
+
+            return Task.Run(() =>
+            {
+                while (this._path.PathTime.ElapsedMilliseconds < this._path.TotalTimeMilliseconds)
+                {
+                    Task.Delay(_interval);
+                }
+            });
         }
 
         public void StopPath()
