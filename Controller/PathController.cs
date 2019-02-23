@@ -76,6 +76,11 @@ namespace Controller
                     this._velTarget.Yaw += this._acceleration * _vector.Yaw;
                 }
             }
+            else
+            {
+                //Purge existing target if any
+                this._velTarget = new Point3D();
+            }
 
             this._velCommand = new Point3D(this._velTarget.X, this._velTarget.Y, this._velTarget.Z, this._velTarget.Yaw);
 
@@ -142,6 +147,11 @@ namespace Controller
             direction.Z /= mag;
             this._vector = direction;
             this._path = new Path(time);
+        }
+
+        public void StopPath()
+        {
+            this._path = null;
         }
     }
 }
