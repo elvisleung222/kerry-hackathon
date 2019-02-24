@@ -17,8 +17,8 @@ namespace Controller
             this.PathTime = new Stopwatch();
             this.TotalTimeMilliseconds = milliseconds;
 
-            this.Start = new Point3D(start.X, start.Y, start.Z, start.Yaw);
-            this.End = new Point3D(end.X, end.Y, end.Z, end.Yaw);
+            this.Start = start;
+            this.End = end;
 
             this.PathTime.Start();
         }

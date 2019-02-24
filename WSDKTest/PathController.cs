@@ -44,7 +44,7 @@ namespace Controller
                 this._posActual.Y = this._posTarget.Y;
                 //TODO: Comment axes with closed loop
                 this._posActual.Z = this._posTarget.Z;
-                //this._posActual.Yaw = this._posTarget.Yaw;
+                //Debug.WriteLine($"#Pos Path in end state");
             }
             else
             {
@@ -54,11 +54,13 @@ namespace Controller
                 this._posTarget.X = portionElapse * this._path.End.X + portionRemain * this._path.Start.X;
                 this._posTarget.Y = portionElapse * this._path.End.Y + portionRemain * this._path.Start.Y;
                 this._posTarget.Z = portionElapse * this._path.End.Z + portionRemain * this._path.Start.Z;
-                this._posTarget.Yaw = portionElapse * this._path.End.Yaw + portionRemain * this._path.Start.Yaw;
+                this._posTarget.Yaw = (portionElapse * (this._path.End.Yaw + 180) + portionRemain * (this._path.Start.Yaw + 180)) % 360 - 180;
+
+                //Debug.WriteLine($"#Pos [{portionElapse}:{portionRemain}] pT=({_posTarget.X},{_posTarget.Y},{_posTarget.Z},{_posTarget.Yaw}); pA=({_posActual.X},{_posActual.Y},{_posActual.Z},{_posActual.Yaw})");
             }
 
-            const double commandScale = 0;
-            const double commandAngleScale = 0.00;
+            const double commandScale = 8;
+            const double commandAngleScale = 0.01;
             var vCommand = new Point3D
             {
                 X = (this._posTarget.X - this._posActual.X) * commandScale,
@@ -66,6 +68,7 @@ namespace Controller
                 Z = (this._posTarget.Z - this._posActual.Z) * commandScale,
                 Yaw = ((this._posTarget.Yaw - this._posActual.Yaw) * commandAngleScale + 180) % 360 - 180
             };
+
 
             //Apply corrective maneuver
             vCommand.Z += this.CalculateZCorrection(this._posActual.Z, this._posTarget.Z);
@@ -77,8 +80,12 @@ namespace Controller
             this._posActual.Z = this._posTarget.Z;
             this._posActual.Yaw = this._posTarget.Yaw;
 
-            var msStr = this._path?.PathTime.Elapsed.ToString(@"mm\:ss\.fff") ?? "null";
-            Debug.WriteLine($"#{iter} [{msStr}] vX={vCommand.X}; vY={vCommand.Y}; vZ={vCommand.Z}; vYaw={vCommand.Yaw}");
+            Task.Run(() =>
+            {
+                var msStr = this._path?.PathTime.Elapsed.ToString(@"mm\:ss\.fff") ?? "null";
+                Debug.WriteLine(
+                        $"#{iter} [{msStr}] vX={vCommand.X}; vY={vCommand.Y}; vZ={vCommand.Z}; vYaw={vCommand.Yaw}");
+            });
 
             //Call externally provided velocity callback
             Task.Run(() => { this._onVelocityUpdated?.Invoke(vCommand); });
@@ -87,11 +94,11 @@ namespace Controller
         private double CalculateYawCorrection(double actual, double target)
         {
             //Use actual to assume no error and run as open loop
-            const double kP = 0.10;
+            const double kP = 0.01;
             const double ki = 0.00;
             const double kd = 0.00;
 
-            var output = (kP * (target - actual) + 180) % 360 - 180;
+            var output = (kP * ((target - actual + 180) % 360 - 180));
 
             return output;
         }
@@ -122,23 +129,27 @@ namespace Controller
 
         public Task StartPath(Point3D end, double time)
         {
-            var start = this._posTarget;
-            var mag = Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2) + Math.Pow(end.Z - start.Z, 2);
+            var start = new Point3D(_posTarget.X, _posTarget.Y, _posTarget.Z, _posTarget.Yaw);
+            //var mag = Math.Pow(end.X - start.X, 2) + Math.Pow(end.Y - start.Y, 2) + Math.Pow(end.Z - start.Z, 2);
 
-            if (Math.Abs(mag) > 0.00001)
-            {
-                end.X /= mag;
-                end.Y /= mag;
-                end.Z /= mag;
-            }
-            else
-            {
-                end.X = 0;
-                end.Y = 0;
-                end.Z = 0;
-            }
+            //if (Math.Abs(mag) > 0.00001)
+            //{
+            //    end.X /= Math.Sqrt(mag);
+            //    end.Y /= Math.Sqrt(mag);
+            //    end.Z /= Math.Sqrt(mag);
+            //}
+            //else
+            //{
+            //    end.X = 0;
+            //    end.Y = 0;
+            //    end.Z = 0;
+            //}
 
             this._path = new Path(start, end, time);
+
+            Debug.WriteLine(
+                $"#Start S=({start.X},{start.Y},{start.Z},{start.Yaw}); E=({end.X},{end.Y},{end.Z},{end.Yaw})");
+
 
             return Task.Run(() =>
             {

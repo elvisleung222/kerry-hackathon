@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Threading;
+using System.Threading.Tasks;
 using Controller;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -8,21 +9,16 @@ namespace ControllerTests
     [TestClass]
     public class PathControllerTests
     {
-        private PathController controller;
+        private readonly PathController controller = new PathController(vel =>
+        {
+
+        });
 
         [TestMethod]
         public void Test()
         {
-            controller = new PathController(this.GetVelocity);
-            controller.StartPath(new Point3D(1, 0, 2, -1), 5000);
-
-            Thread.Sleep(7000);
-        }
-
-        public void GetVelocity(Point3D vel)
-        {
-            controller.SetActualYaw(vel.Yaw);
-            Debug.WriteLine($"In callback");
+            this.controller.StartPath(new Point3D(0, 1, 1, 90), 5000);
+            Thread.Sleep(5000);
         }
     }
 }
